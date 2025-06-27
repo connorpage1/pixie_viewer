@@ -34,7 +34,9 @@ def upload_file():
         path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(path)
         
-        asset = Asset(filename=filename, filetype=file_ext)
+        url= f'/uploads/{filename}'
+        
+        asset = Asset(filename=filename, filetype=file_ext, url=url)
         db.session.add(asset)
         db.session.commit()
         
@@ -45,6 +47,27 @@ def upload_file():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+
+@app.route('/current', methods=['GET'])
+def get_current_assets():
+    latest_stl = Asset.query.filter_by(filetype='stl').order_by(Asset.uploaded_at.desc()).first()
+    latest_video = Asset.query.filter(Asset.filetype.in_(['mp4', 'mov', 'avi'])).order_by(Asset.uploaded_at.desc()).first()
+
+    result = {
+        'stl': {
+            'filename': latest_stl.filename,
+            'url': latest_stl.url,
+            'uploaded_at': latest_stl.uploaded_at.isoformat()
+        } if latest_stl else None,
+        'video': {
+            'filename': latest_video.filename,
+            'url': latest_video.url,
+            'uploaded_at': latest_video.uploaded_at.isoformat()
+        } if latest_video else None
+    }
+    
+    return jsonify(result)
+    
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
